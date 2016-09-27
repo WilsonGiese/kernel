@@ -1,10 +1,15 @@
 #![no_std]
 
+extern crate cpuio;
+
 use core::fmt;
 use core::fmt::Write;
 
 mod color;
 use color::Color;
+
+mod cursor;
+use cursor::Cursor;
 
 const ROWS: usize = 25;
 const COLS: usize = 80;
@@ -14,6 +19,7 @@ pub struct Vga<T: AsMut<[u8]>> {
     slice: T,
     buffer: [u8; ROWS * COL_BYTES],
     position: usize,
+    cursor: Cursor,
 }
 
 impl<T: AsMut<[u8]>> Vga<T> {
@@ -25,6 +31,7 @@ impl<T: AsMut<[u8]>> Vga<T> {
             slice: slice,
             buffer: [0; ROWS * COL_BYTES],
             position: 0,
+            cursor: Cursor::new(),
         }
     }
 
@@ -48,6 +55,8 @@ impl<T: AsMut<[u8]>> Vga<T> {
         if self.position >= self.buffer.len() {
             self.scroll();
         }
+
+        self.cursor.set(self.position)
     }
 
     fn scroll(&mut self) {
@@ -58,7 +67,7 @@ impl<T: AsMut<[u8]>> Vga<T> {
                 self.buffer[prev_position] = self.buffer[current_position];
             }
         }
-         
+
         for cb in 0..COL_BYTES/2 {
             self.buffer[((ROWS - 1) * COL_BYTES) + (cb * 2)] = ' ' as u8;
         }
