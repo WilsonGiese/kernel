@@ -8,9 +8,8 @@
 //! rather than trying to safe some kind of static value, because statics aren't safe, and it's not
 //! like the `Port`s are expensive to create in the first place.
 //!
-//! This module has two functions, one of which initializes the cursor in the first place, and the
-//! second which updates it to a particular location. `initialize()` must be called before you call
-//! `set()` or `set()` can't do its job.
+//! This module contains the type Cursor, which has two methods, one which creates the cursor in
+//! the first place, and the second which updates it to a particular location.
 //!
 //! References:
 //!
@@ -47,7 +46,7 @@ impl Cursor {
     /// Sets the cursor to a given position.
     ///
     /// Instead of an X/Y coordinate, this position is a 0-(CONSOLE_ROWS * CONSOLE_COLS) position.
-    pub fn set(&mut self, position: usize) {
+    pub fn set(&mut self, position: u16) {
         self.crt_index.write(0b1111);
         self.crt_io.write(position as u8);
 

@@ -18,8 +18,8 @@ pub enum Color {
     White = 0xF,
 }
 
-pub fn colorcode(foreground: Color, background: Color) -> u8 {
-    ((background as u8) << 4) + (foreground as u8)
+pub fn colorcode(foreground: Color, background: Color) -> u16 {
+    ((background as u16) << 12) | ((foreground as u16) << 8)
 }
 
 #[cfg(test)]
@@ -29,9 +29,9 @@ mod tests {
 
     #[test]
     fn colorcode() {
-        assert_eq!(color::colorcode(Color::Blue, Color::BrightMagenta), 0xD1);
-        assert_eq!(color::colorcode(Color::Yellow, Color::Red), 0x4E);
-        assert_eq!(color::colorcode(Color::DarkGray, Color::White), 0xF8);
+        assert_eq!(color::colorcode(Color::Blue, Color::BrightMagenta), 0xD100);
+        assert_eq!(color::colorcode(Color::Yellow, Color::Red), 0x4E00);
+        assert_eq!(color::colorcode(Color::DarkGray, Color::White), 0xF800);
     }
 
 }
