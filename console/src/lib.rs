@@ -9,31 +9,24 @@ mod color;
 use color::Color;
 
 mod cursor;
-use cursor::Cursor;
+pub use cursor::{Cursor, CursorType};
 
 const ROWS: usize = 25;
 const COLS: usize = 80;
 
 macro_rules! Cell {
-    ($byte:expr, $color:expr) =>  ( $color | $byte as u16 );
+    ($byte:expr, $color:expr) => ( $color | $byte as u16 );
 }
 
-// #[test]
-// fn create() {
-//     let mut mock_memory = vec![0u16; 25 * 80];
-//
-//     Vga::new(&mut mock_memory);
-// }
-
-pub struct Vga<T: AsMut<[u16]>> {
+pub struct Vga<T: AsMut<[u16]>, C: CursorType> {
     slice: T,
     buffer: [u16; ROWS * COLS],
     position: usize,
-    cursor: Cursor,
+    cursor: C,
 }
 
-impl<T: AsMut<[u16]>> Vga<T> {
-    pub fn new(mut slice: T) -> Vga<T> {
+impl<T: AsMut<[u16]>, C: CursorType> Vga<T, C> {
+    pub fn new(mut slice: T, cursor: C) -> Vga<T, C> {
         // we must have enough bytes of backing storage to make this work.
         assert_eq!(slice.as_mut().len(), ROWS * COLS);
 
@@ -41,7 +34,7 @@ impl<T: AsMut<[u16]>> Vga<T> {
             slice: slice,
             buffer: [0; ROWS * COLS],
             position: 0,
-            cursor: Cursor::new(),
+            cursor: cursor,
         }
     }
 
@@ -84,7 +77,7 @@ impl<T: AsMut<[u16]>> Vga<T> {
     }
 }
 
-impl<T: AsMut<[u16]>> Write for Vga<T> {
+impl<T: AsMut<[u16]>, C: CursorType> Write for Vga<T, C> {
     fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
         for b in s.bytes() {
             self.write_byte(b);
@@ -94,120 +87,105 @@ impl<T: AsMut<[u16]>> Write for Vga<T> {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use Vga;
-//     use core::fmt::Write;
-//
-//     use ROWS;
-//     use COL_BYTES;
-//
-//     #[test]
-//     fn write_a_letter() {
-//         let mut mock_memory = [0u8; ROWS * COL_BYTES];
-//
-//         let mut vga = Vga::new(&mut mock_memory[..]);
-//
-//         vga.write_str("a").unwrap();
-//
-//         assert_eq!(vga.buffer[0], 'a' as u8);
-//         assert_eq!(vga.buffer[1], 0x02);
-//     }
-//
-//     #[test]
-//     fn write_a_word() {
-//         let mut mock_memory = [0u8; ROWS * COL_BYTES];
-//         let mut vga = Vga::new(&mut mock_memory[..]);
-//
-//         let word = "word";
-//         vga.write_str(word).unwrap();
-//
-//         assert_eq!(vga.buffer[0], 'w' as u8);
-//         assert_eq!(vga.buffer[1], 0x02);
-//         assert_eq!(vga.buffer[2], 'o' as u8);
-//         assert_eq!(vga.buffer[3], 0x02);
-//         assert_eq!(vga.buffer[4], 'r' as u8);
-//         assert_eq!(vga.buffer[5], 0x02);
-//         assert_eq!(vga.buffer[6], 'd' as u8);
-//         assert_eq!(vga.buffer[7], 0x02);
-//     }
-//
-//     #[test]
-//     fn write_multiple_words() {
-//         let mut mock_memory = [0u8; ROWS * COL_BYTES];
-//         let mut vga = Vga::new(&mut mock_memory[..]);
-//
-//         vga.write_str("hello ").unwrap();
-//         vga.write_str("world").unwrap();
-//
-//         assert_eq!(vga.buffer[0], 'h' as u8);
-//         assert_eq!(vga.buffer[1], 0x02);
-//         assert_eq!(vga.buffer[2], 'e' as u8);
-//         assert_eq!(vga.buffer[3], 0x02);
-//         assert_eq!(vga.buffer[4], 'l' as u8);
-//         assert_eq!(vga.buffer[5], 0x02);
-//         assert_eq!(vga.buffer[6], 'l' as u8);
-//         assert_eq!(vga.buffer[7], 0x02);
-//         assert_eq!(vga.buffer[8], 'o' as u8);
-//         assert_eq!(vga.buffer[9], 0x02);
-//         assert_eq!(vga.buffer[10], ' ' as u8);
-//         assert_eq!(vga.buffer[11], 0x02);
-//         assert_eq!(vga.buffer[12], 'w' as u8);
-//         assert_eq!(vga.buffer[13], 0x02);
-//         assert_eq!(vga.buffer[14], 'o' as u8);
-//         assert_eq!(vga.buffer[15], 0x02);
-//         assert_eq!(vga.buffer[16], 'r' as u8);
-//         assert_eq!(vga.buffer[17], 0x02);
-//         assert_eq!(vga.buffer[18], 'l' as u8);
-//         assert_eq!(vga.buffer[19], 0x02);
-//         assert_eq!(vga.buffer[20], 'd' as u8);
-//         assert_eq!(vga.buffer[21], 0x02);
-//     }
-//
-//     #[test]
-//     fn write_newline() {
-//         let mut mock_memory = [0u8; ROWS * COL_BYTES];
-//         let mut vga = Vga::new(&mut mock_memory[..]);
-//
-//         vga.write_str("hello\nworld\n!").unwrap();
-//
-//         assert_eq!(vga.buffer[0], 'h' as u8);
-//         assert_eq!(vga.buffer[1], 0x02);
-//         assert_eq!(vga.buffer[2], 'e' as u8);
-//         assert_eq!(vga.buffer[3], 0x02);
-//         assert_eq!(vga.buffer[4], 'l' as u8);
-//         assert_eq!(vga.buffer[5], 0x02);
-//         assert_eq!(vga.buffer[6], 'l' as u8);
-//         assert_eq!(vga.buffer[7], 0x02);
-//         assert_eq!(vga.buffer[8], 'o' as u8);
-//         assert_eq!(vga.buffer[9], 0x02);
-//         assert_eq!(vga.buffer[160], 'w' as u8);
-//         assert_eq!(vga.buffer[161], 0x02);
-//         assert_eq!(vga.buffer[162], 'o' as u8);
-//         assert_eq!(vga.buffer[163], 0x02);
-//         assert_eq!(vga.buffer[164], 'r' as u8);
-//         assert_eq!(vga.buffer[165], 0x02);
-//         assert_eq!(vga.buffer[166], 'l' as u8);
-//         assert_eq!(vga.buffer[167], 0x02);
-//         assert_eq!(vga.buffer[168], 'd' as u8);
-//         assert_eq!(vga.buffer[169], 0x02);
-//         assert_eq!(vga.buffer[320], '!' as u8);
-//         assert_eq!(vga.buffer[321], 0x02);
-//     }
-//
-//     #[test]
-//     fn write_scroll() {
-//         let mut mock_memory = [0u8; ROWS * COL_BYTES];
-//         let mut vga = Vga::new(&mut mock_memory[..]);
-//
-//         for b in "abcdefghijklmnopqrstuvwxyz".bytes() {
-//             vga.write_byte(b);
-//             vga.write_byte('\n' as u8);
-//         }
-//
-//         assert_eq!(vga.buffer[0], 'c' as u8);
-//         for cb in 0..COL_BYTES/2 {
-//             assert_eq!(vga.buffer[(ROWS - 1) * COL_BYTES + (cb * 2)], ' ' as u8);
-//         }
-//     }
-//}
+#[cfg(test)]
+mod tests {
+    use Vga;
+    use cursor::CursorType;
+    use core::fmt::Write;
+
+    use ROWS;
+    use COLS;
+
+    struct MockCursor;
+
+    impl CursorType for MockCursor {
+        fn new() -> MockCursor { MockCursor { } }
+        fn set(&mut self, _: u16) { }
+    }
+
+    #[test]
+    fn write_a_letter() {
+        let mut mock_memory = [0u16; ROWS * COLS];
+        let mock_cursor = MockCursor::new();
+        let mut vga = Vga::new(&mut mock_memory[..], mock_cursor);
+
+        vga.write_str("a").unwrap();
+
+        assert_eq!(vga.buffer[0], 0x0200 | 'a' as u16);
+    }
+
+    #[test]
+    fn write_a_word() {
+        let mut mock_memory = [0u16; ROWS * COLS];
+        let mock_cursor = MockCursor::new();
+        let mut vga = Vga::new(&mut mock_memory[..], mock_cursor);
+
+        let word = "word";
+        vga.write_str(word).unwrap();
+
+        assert_eq!(vga.buffer[0], 0x0200 | 'w' as u16);
+        assert_eq!(vga.buffer[1], 0x0200 | 'o' as u16);
+        assert_eq!(vga.buffer[2], 0x0200 | 'r' as u16);
+        assert_eq!(vga.buffer[3], 0x0200 | 'd' as u16);
+    }
+
+    #[test]
+    fn write_multiple_words() {
+        let mut mock_memory = [0u16; ROWS * COLS];
+        let mock_cursor = MockCursor::new();
+        let mut vga = Vga::new(&mut mock_memory[..], mock_cursor);
+
+        vga.write_str("hello ").unwrap();
+        vga.write_str("world").unwrap();
+
+        assert_eq!(vga.buffer[0], 0x0200 | 'h' as u16);
+        assert_eq!(vga.buffer[1], 0x0200 | 'e' as u16);
+        assert_eq!(vga.buffer[2], 0x0200 | 'l' as u16);
+        assert_eq!(vga.buffer[3], 0x0200 | 'l' as u16);
+        assert_eq!(vga.buffer[4], 0x0200 | 'o' as u16);
+        assert_eq!(vga.buffer[5], 0x0200 | ' ' as u16);
+        assert_eq!(vga.buffer[6], 0x0200 | 'w' as u16);
+        assert_eq!(vga.buffer[7], 0x0200 | 'o' as u16);
+        assert_eq!(vga.buffer[8], 0x0200 | 'r' as u16);
+        assert_eq!(vga.buffer[9], 0x0200 | 'l' as u16);
+        assert_eq!(vga.buffer[10], 0x0200 | 'd' as u16);
+    }
+
+    #[test]
+    fn write_newline() {
+        let mut mock_memory = [0u16; ROWS * COLS];
+        let mock_cursor = MockCursor::new();
+        let mut vga = Vga::new(&mut mock_memory[..], mock_cursor);
+
+        vga.write_str("hello\nworld\n!").unwrap();
+
+        assert_eq!(vga.buffer[0], 0x0200 | 'h' as u16);
+        assert_eq!(vga.buffer[1], 0x0200 | 'e' as u16);
+        assert_eq!(vga.buffer[2], 0x0200 | 'l' as u16);
+        assert_eq!(vga.buffer[3], 0x0200 | 'l' as u16);
+        assert_eq!(vga.buffer[4], 0x0200 | 'o' as u16);
+        assert_eq!(vga.buffer[80], 0x0200 | 'w' as u16);
+        assert_eq!(vga.buffer[81], 0x0200 | 'o' as u16);
+        assert_eq!(vga.buffer[82], 0x0200 | 'r' as u16);
+        assert_eq!(vga.buffer[83], 0x0200 | 'l' as u16);
+        assert_eq!(vga.buffer[84], 0x0200 | 'd' as u16);
+        assert_eq!(vga.buffer[160], 0x0200 | '!' as u16);
+    }
+
+    #[test]
+    fn write_scroll() {
+        let mut mock_memory = [0u16; ROWS * COLS];
+        let mock_cursor = MockCursor::new();
+        let mut vga = Vga::new(&mut mock_memory[..], mock_cursor);
+
+        for b in "abcdefghijklmnopqrstuvwxyz".bytes() {
+            vga.write_byte(b);
+            vga.write_byte('\n' as u8);
+        }
+
+        assert_eq!(vga.buffer[0], 0x0200 | 'c' as u16);
+        for cb in ((ROWS - 1) * COLS)..(ROWS * COLS) {
+            assert_eq!(vga.buffer[cb], 0x0200);
+        }
+    }
+}

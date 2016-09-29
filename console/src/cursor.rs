@@ -1,4 +1,3 @@
-
 //! Dealing with the VGA cursor.
 //!
 //! The VGA cursor is handled through a system of 'indexed registers.' This means that you take a
@@ -20,13 +19,18 @@ use cpuio::Port;
 
 const CRT_PORT: u16 = 0x3D4;
 
+pub trait CursorType {
+    fn new() -> Self;
+    fn set(&mut self, u16);
+}
+
 pub struct Cursor {
     crt_index: Port<u8>,
     crt_io: Port<u8>,
 }
 
-impl Cursor {
-    pub fn new() -> Cursor {
+impl CursorType for Cursor {
+    fn new() -> Cursor {
 
         let mut crt_index = unsafe { Port::new(CRT_PORT) };
         let mut crt_io = unsafe { Port::new(CRT_PORT + 1) };
@@ -46,7 +50,7 @@ impl Cursor {
     /// Sets the cursor to a given position.
     ///
     /// Instead of an X/Y coordinate, this position is a 0-(CONSOLE_ROWS * CONSOLE_COLS) position.
-    pub fn set(&mut self, position: u16) {
+    fn set(&mut self, position: u16) {
         self.crt_index.write(0b1111);
         self.crt_io.write(position as u8);
 

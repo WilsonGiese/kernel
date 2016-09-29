@@ -1,22 +1,22 @@
 use core;
-use console::Vga;
+use console::{Vga, Cursor, CursorType};
 use spin::Mutex;
 
 #[macro_use]
 mod kprint;
 
 pub struct Context {
-    pub vga: Mutex<Vga<&'static mut [u8]>>,
+    pub vga: Mutex<Vga<&'static mut [u16], Cursor>>,
 }
 
 impl Context {
     pub fn new() -> Context {
         let slice = unsafe {
-            core::slice::from_raw_parts_mut(0xb8000 as *mut u8, 4000)
+            core::slice::from_raw_parts_mut(0xb8000 as *mut u16, 2000)
         };
 
         Context {
-            vga: Mutex::new(Vga::new(slice)),
+            vga: Mutex::new(Vga::new(slice, Cursor::new())),
         }
     }
 }
