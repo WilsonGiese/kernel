@@ -1,6 +1,6 @@
 use core;
 
-use console::Vga;
+use console::{Vga, Cursor, CursorType};
 
 use interrupts::IdtRef;
 
@@ -10,7 +10,7 @@ use spin::Mutex;
 mod kprint;
 
 pub struct Context {
-    pub vga: Mutex<Vga<&'static mut [u8]>>,
+    pub vga: Mutex<Vga<&'static mut [u16], Cursor>>,
     pub idt: IdtRef,
 }
 
@@ -21,7 +21,7 @@ impl Context {
         };
 
         Context {
-            vga: Mutex::new(Vga::new(slice)),
+            vga: Mutex::new(Vga::new(slice, Cursor::new())),
             idt: IdtRef::new(),
         }
     }
